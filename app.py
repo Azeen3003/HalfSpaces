@@ -11,33 +11,18 @@ import pyarrow.parquet as pq
 
 # Caching the data loading functions
 @st.cache_data(ttl=1800, max_entries=2)
-def load_data(data_path: str, columns=None, max_rows: int = None):
-    if data_path.startswith("http"):  # Remote Parquet file (Hugging Face)
-        with fsspec.open(data_path) as file:  # Open the remote file
-            parquet_file = pq.ParquetFile(file)
-
-            df_list = []
-            num_rows = 0
-
-            # Read data in row groups (efficient memory usage)
-            for row_group in range(parquet_file.num_row_groups):
-                df_chunk = parquet_file.read_row_group(row_group, columns=columns).to_pandas()
-                df_list.append(df_chunk)
-                num_rows += len(df_chunk)
-
-                if max_rows and num_rows >= max_rows:
-                    break  # Stop loading if max rows reached
-
-            return pd.concat(df_list, ignore_index=True)
-
+def load_data(data_path: str, columns=None):
+    if data_path.startswith("http"):  # Hugging Face Parquet file
+        with fsspec.open(data_path) as file:
+            df = pd.read_parquet(file, engine="pyarrow", columns=columns)
     elif data_path.endswith(".csv"):  # Local CSV file
-        return pd.read_csv(data_path)
-    
+        df = pd.read_csv(data_path)
     elif data_path.endswith(".parquet"):  # Local Parquet file
-        return pd.read_parquet(data_path, engine="pyarrow", columns=columns)
-    
+        df = pd.read_parquet(data_path, engine="pyarrow", columns=columns)
     else:
         raise ValueError("Unsupported file format! Only CSV and Parquet are allowed.")
+
+    return df
     
 
 @st.cache_data
@@ -276,7 +261,12 @@ def main():
     st.set_page_config(page_title="Half-Spaces Progressive Actions", layout="wide")
     
     # Load the main dataset and minutes data using cached function
-    data = load_data("hf://datasets/pranavm28/Top_5_Leagues_23_24/Top_5_Leagues_23_24.parquet")
+    hf_url = "https://huggingface.co/datasets/pranavm28/Top_5_Leagues_23_24/resolve/main/Top_5_Leagues_23_24.parquet"
+    data = load_data(hf_url, columns = [
+        "league", "season", "gameId", "period", "minute", "second", "expandedMinute",  
+        "type", "outcomeType", "teamId", "team", "playerId", "player",  
+        "x", "y", "endX", "endY"
+    ])
     mins_data = load_data("T5 Leagues Mins 23-24.csv")
     
     # Streamlit App
