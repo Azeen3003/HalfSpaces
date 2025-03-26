@@ -269,7 +269,7 @@ def main():
     
     # Load the main dataset and minutes data using cached function
     data = load_data("Top_5_Leagues_23_24.parquet")
-    mins_data = load_data("T5 Leagues Mins 23-24.csv")
+    mins_data = load_data("https://huggingface.co/datasets/pranavm28/Top_5_Leagues_23_24/blob/main/Top_5_Leagues_23_24.parquet")
     
     # Streamlit App
     st.title("Top 5 Leagues Half-Spaces Progressive Actions")
