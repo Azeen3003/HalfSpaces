@@ -271,7 +271,7 @@ def main():
     st.set_page_config(page_title="Half-Spaces Progressive Actions", layout="wide")
     
     # Load the main dataset and minutes data using cached function
-    data = load_data("https://huggingface.co/datasets/pranavm28/Top_5_Leagues_23_24/resolve/main/Top_5_Leagues_23_24.parquet")
+    data = load_data("hf://datasets/pranavm28/Top_5_Leagues_23_24/Top_5_Leagues_23_24.parquet")
     mins_data = load_data("T5 Leagues Mins 23-24.csv")
     
     # Streamlit App
