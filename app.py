@@ -11,27 +11,28 @@ import pyarrow.parquet as pq
 
 # Caching the data loading functions
 @st.cache_data(ttl=1800, max_entries=2)
-def load_data(data_path: str, columns=None, max_rows: int = None):
-    if data_path.startswith("http") and data_path.endswith(".parquet"):  # Remote file (Hugging Face)
-        file = fsspec.open(data_path).open()  # Open file stream
-        parquet_file = pq.ParquetFile(file)  # Read as PyArrow Parquet file
-        
-        df_list = []
-        num_rows = 0
+def load_data(data_path: str, columns=None, row_group_size: int = 5000):
+    if data_path.endswith(".csv"):
+        return pd.read_csv(data_path)
 
-        # Load in row groups (chunked)
+    elif data_path.endswith(".parquet"):
+        # Open parquet file
+        parquet_file = pq.ParquetFile(data_path)
+
+        # Read in chunks using row groups
+        df_list = []
         for row_group in range(parquet_file.num_row_groups):
             df_chunk = parquet_file.read_row_group(row_group, columns=columns).to_pandas()
             df_list.append(df_chunk)
-            num_rows += len(df_chunk)
-
-            if max_rows and num_rows >= max_rows:
-                break  # Stop early if max rows reached
+            
+            # Stop early if needed (uncomment to limit rows)
+            # if len(df_list) * row_group_size > 50000:
+            #     break  
 
         return pd.concat(df_list, ignore_index=True)
 
-    elif data_path.endswith(".csv"):  # Local CSV file
-        return pd.read_csv(data_path)
+    else:
+        raise ValueError("Unsupported file format! Only CSV and Parquet are allowed.")
     
 
 @st.cache_data
@@ -270,8 +271,8 @@ def main():
     st.set_page_config(page_title="Half-Spaces Progressive Actions", layout="wide")
     
     # Load the main dataset and minutes data using cached function
-    data = load_data("Top_5_Leagues_23_24.parquet")
-    mins_data = load_data("https://huggingface.co/datasets/pranavm28/Top_5_Leagues_23_24/resolve/main/Top_5_Leagues_23_24.parquet")
+    data = load_data("https://huggingface.co/datasets/pranavm28/Top_5_Leagues_23_24/resolve/main/Top_5_Leagues_23_24.parquet")
+    mins_data = load_data("T5 Leagues Mins 23-24.csv")
     
     # Streamlit App
     st.title("Top 5 Leagues Half-Spaces Progressive Actions")
