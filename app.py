@@ -24,7 +24,7 @@ def load_data(data_path: str, columns=None):
         st.error(f"Error loading data: {e}")
         return pd.DataFrame()
 
-#@st.cache_data
+@st.cache_data
 def add_carries(_game_df):
     game_df = _game_df.copy()
     game_df['time_seconds'] = game_df['minute']*60+game_df['second']
@@ -122,7 +122,7 @@ def calculate_progressive_actions(df):
     df_prog['progressive'] = (df_prog['end'] / df_prog['beginning']) < 0.75
     return df_prog[df_prog['progressive']]
 
-#@st.cache_data
+@st.cache_data
 def process_halfspace_data(data_passes, data_carries, mins_data):
     prog_rhs_passes = calculate_progressive_actions(data_passes[data_passes['in_rhs']])
     prog_lhs_passes = calculate_progressive_actions(data_passes[data_passes['in_lhs']])
@@ -264,6 +264,10 @@ def main():
     st.title("Top 5 Leagues Half-Spaces Progressive Actions")
     
     st.sidebar.header("Filters")
+
+     # Store previous league selection in session state
+    if 'previous_league' not in st.session_state:
+        st.session_state.previous_league = None # Initialize
     
     # Season and League Selection
     seasons = sorted(data['season'].unique())
@@ -271,6 +275,17 @@ def main():
     
     selected_season = st.sidebar.selectbox("Select Season", seasons)
     selected_league = st.sidebar.selectbox("Select League", leagues)
+
+    # *** Check if the league has changed ***
+    if selected_league != st.session_state.previous_league:
+        st.write(f"League changed from {st.session_state.previous_league} to {selected_league}. Clearing caches.")
+        # Clear caches associated with functions that depend on filtered data
+        add_carries.clear()
+        prepare_data.clear() # Might need clearing too if its input changes significantly
+        process_halfspace_data.clear()
+        calculate_progressive_actions.clear() # Clear this too for safety
+        # Update the previous league in state
+        st.session_state.previous_league = selected_league
     
     # Filter teams dynamically based on selected league and season
     league_teams = sorted(data[
@@ -302,7 +317,18 @@ def main():
         (data['league'] == selected_league) &
         (data['team'].isin(selected_teams))
     ]
-    
+
+    st.write(f"DEBUG: Shape of filtered_data: {filtered_data.shape}") # Add check
+
+    # --- Call cached functions ---
+    # Need to ensure these functions are defined *before* main()
+    # or imported correctly for .clear() to work.
+
+    if filtered_data.empty:
+         st.warning(f"No event data found for {selected_league} / selected teams.")
+         # Handle empty state gracefully, maybe skip processing
+         st.stop()
+
     # Add carries to the filtered data
     filtered_data = add_carries(filtered_data)
     
