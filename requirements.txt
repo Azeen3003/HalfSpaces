@@ -10,4 +10,3 @@ huggingface_hub
 requests
 aiohttp
 pyarrow
-gc
